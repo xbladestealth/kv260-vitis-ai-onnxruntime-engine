@@ -28,6 +28,7 @@ input_data = np.load(args.input).astype(np.float32)
 session = ort.InferenceSession(
     args.model,
     providers=[provider],
+    provider_options=[{"config_file": "/usr/bin/vaip_config.json"}],
 )
 
 input_name = session.get_inputs()[0].name

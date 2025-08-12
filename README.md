@@ -1,8 +1,9 @@
-# Vitis AI Environment
+# Vitis AI Docker Environment
 
 ## Build Docker Image for Vitis AI 3.5.1
 
 ```bash
+cd Downloads/workspace/
 git clone https://github.com/xbladestealth/Vitis-AI -b 3.5.1
 cd Vitis-AI/docker/
 ./docker_build.sh -t gpu -f pytorch
@@ -23,7 +24,7 @@ bash docker_run.sh xilinx/vitis-ai-pytorch-gpu:3.5.1.001-ad2b6ded7
 conda activate vitis-ai-pytorch
 ```
 
-# Install Vitis AI ONNXRuntime Engine
+## Install Vitis AI ONNXRuntime Engine
 
 Install VOE n the docker container
 
@@ -54,7 +55,7 @@ Requires: numpy, onnx, onnxruntime, onnxruntime-extensions, protobuf
 Required-by: 
 ```
 
-# VOE Workflow Demo with MNIST
+## VOE Quantization Workflow
 
 ```bash
 cd /workspace/
@@ -62,7 +63,7 @@ git clone https://github.com/xbladestealth/kv260-vitis-ai-onnxruntime-engine.git
 cd kv260-vitis-ai-onnxruntime-engine/scripts/mnist/
 ```
 
-## Base Model
+### MNIST CNN Model
 
 Prepare it by yourself
 ```bash
@@ -77,111 +78,134 @@ wget https://huggingface.co/onnxmodelzoo/legacy_models/resolve/main/validated/vi
 
 Check out the model by running:
 ```bash
-python run_inference_mnist.py
+python run_inference_mnist.py --provider cpu --model mnist_cnn.onnx --input input.npy
 ```
 
-## Preprocess
+### Preprocess
 
 ```bash
-python xxx
+python -m onnxruntime.quantization.preprocess --input mnist_cnn.onnx --output mnist_cnn_preproc.onnx
 ```
 
-## Quantize
+### Quantize
 
 ```bash
-python yyy
+python quantize_static.py
 ```
 
+# Build Vitis Platform and DPU Application
 
-## 
+Create custom Vitis platform by following the instructions in the link below:  
+- https://github.com/Xilinx/Vitis-Tutorials/blob/2023.1/Vitis_Platform_Creation/Design_Tutorials/01-Edge-KV260/step1.md
 
+Instead of following the Step 3, follow the instructions to build DPU application in link below:  
+- https://qiita.com/basaro_k/items/dc439ffbc3ea3aed5eb2
+- https://misoji-engineer.com/archives/vitis-ai-3-5-kv260-yolox.html
 
-<!-- ## Download
-Download the ONNX model file from ONNX github repository:
+After both the vitis platform and DPU application, prepare files to copy to your sd card:
+
 ```bash
-mkdir -p models/mnist
-cd models/mnist/
-wget https://huggingface.co/onnxmodelzoo/legacy_models/resolve/main/validated/vision/classification/mnist/model/mnist-12.onnx -O mnist.onnx
-``` -->
-
-<!-- ## Preprocess
-Pre-process prepares a float32 model for quantization.
-```bash
-python -m onnxruntime.quantization.preprocess --input mnist.onnx --output mnist_preproc.onnx
+cd Downloads/workspace/kv260/
+mkdir -p sd_card/dpu/
+cd sd_card/
+cp kv260_vitis_platform/dtg_output/pl.dtbo dpu/
+cp kv260_vitis_application/dpu_system_hw_link/Hardware/dpu.xclbin dpu/dpu.bin
+cp kv260_vitis_application/dpu_system_hw_link/Hardware/dpu.build/link/vivado/vpl/prj/prj.gen/sources_1/bd/design_1/ip/design_1_DPUCZDX8G_1_0/arch.json dpu/
+touch dpu/shell.json
+touch dpu/vart.conf
 ```
 
-Otherwise you might get this warning:
-```bash
-WARNING:root:Please consider to run pre-processing before quantization. Refer to example: https://github.com/microsoft/onnxruntime-inference-examples/blob/main/quantization/image_classification/cpu/ReadMe.md 
+Edit shell.json:
+```json
+shell_type	"XRT_FLAT"
+num_slots	"1"
 ```
 
-## Quantize
-Create a Python script `quantize_mnist.py` to quantize the model:
+Edit vart.conf:
 ```bash
-import onnx
-from onnxruntime.quantization import quantize_dynamic, QuantType
-
-model_fp32 = "mnist_preproc.onnx"
-model_quant = "mnist_quantized.onnx"
-
-quantize_dynamic(model_fp32, model_quant, weight_type=QuantType.QUInt8)
+firmware: /lib/firmware/xilinx/dpu/dpu.bin
 ```
 
-Run the script:
-```bash
-python3 quantize_mnist.py
-```
+Note that `arch.json` is needed only when you compile a quantized model and export a `*.xmodel`, but we just copy it to `dpu/` so that we don't have to look for directories to find it.
 
-## Compile
-```bash
-vai_c_xir -x mnist_quantized.onnx -a arch.json -o compiled_mnist
-``` -->
-## Test
-Create a python script `run_inference_mnist.py` to test the compiled model:
-```bash
-xxxxxx
-```
+# Run MNIST CNN with DPU on KV260
 
-# KV260
+## Flash SD Card (PC)
+Flash KV260 SD image (`xilinx-v2023.1_kv260_sdimage.zip`) to your sd card using `balenaEtcher`.
 
-## Boot and Config IP
+## Serial Connection (PC)
 
-Boot and set up IP address:
+Attach to KV260 for the first time:
 ```bash
 sudo screen /dev/ttyUSB1 115200
-login: petalinux
-pass: petalinux
-sudo ifconfig eth1 192.168.0.10
 ```
 
-## Install VOE
+## Setup SSH (KV260)
+
+Configure the IP address for ssh/scp on KV260:
 ```bash
-scp vitis_ai_2023.1-r3.5.0.tar.gz voe-0.1.0-py3-none-any.whl onnxruntime_vitisai-1.16.0-py3-none-any.whl petalinux@192.168.0.10:./
+sudo ifconfig eth1 192.168.0.11
+ping 192.168.0.10
+```
+
+where `192.168.0.10` is the ip address of your PC.
+
+## Copy Files (PC)
+
+```bash
+cd Downloads/workspace/kv260/sd_card/
+scp -r dpu/ petalinux@192.168.0.11:~/
+```
+
+```bash
+cd Downloads/workspace/downloads/
+scp vitis_ai_2023.1-r3.5.0.tar.gz voe-0.1.0-py3-none-any.whl onnxruntime_vitisai-1.16.0-py3-none-any.whl petalinux@192.168.0.11:./
+```
+
+```bash
+cd Downloads/workspace/Vitis-AI/kv260-vitis-ai-onnxruntime-engine/scripts/
+scp -r mnist/ petalinux@192.168.0.11:~/
+```
+
+## Install Dependencies (KV260)
+
+```bash
+sudo dnf install zocl-202310.2.15.0-r0.0.zynqmp_generic
+sudo dnf install xrt-202310.2.15.0-r0.0.cortexa72_cortexa53
+sudo dnf install packagegroup-petalinux-opencv
+wget https://www.xilinx.com/bin/public/openDownload?filename=vitis-ai-runtime-3.5.0.tar.gz -O vitis-ai-runtime-3.5.0.tar.gz
+tar -xzvf vitis-ai-runtime-3.5.0.tar.gz
+cd vitis-ai-runtime-3.5.0/2023.1/aarch64/centos/
+sudo bash ./setup.sh
+```
+
+## Install Vitis AI ONNXRuntime Engine (KV260)
+```bash
+cd ~
 sudo tar -xzvf vitis_ai_2023.1-r3.5.0.tar.gz -C /
 pip3 install voe*.whl
 pip3 install onnxruntime_vitisai*.whl
 ```
 
-## Startup DPU
+## Startup DPU (KV260)
 
 ```bash
-cd dpu/
+cd ~/dpu/
+sudo mkdir /lib/firmware/xilinx/dpu
+sudo cp dpu.bin pl.dtbo shell.json /lib/firmware/xilinx/dpu/
 sudo cp vart.conf /etc/
 ```
 
 Load DPU:
 ```bash
 sudo xmutil listapps
-sudo xmutil unloadappsudo 
+sudo xmutil unloadapp
 sudo xmutil loadapp dpu
 ```
 
-Check if DPU is working with YOLOX:
-```bash
-./test_jpeg_yolovx tsd_yolox_pt_acc/tsd_yolox_pt_acc.xmodel stop_sign.jpg
-```
+## Run MNIST (KV260)
 
-Finally, just run the script to run inference:
 ```bash
-python3 run_inference_mnist.py
+cd ~/mnist/
+python run_inference_mnist.py --provider dpu --model mnist_cnn_quantized.onnx --input input.npy
 ```

@@ -1,6 +1,6 @@
 import vai_q_onnx
 from torch.utils.data import DataLoader
-from onnxruntime.quantization import CalibrationDataReader, QuantType
+from onnxruntime.quantization import CalibrationDataReader, QuantType, QuantFormat
 from torchvision import datasets, transforms
 
 
@@ -20,13 +20,13 @@ class MnistDataReader(CalibrationDataReader):
             return None
 
 
-model_input = "./mnist_cnn.onnx"
+model_input = "./mnist_cnn_preproc.onnx"
 model_output = "./mnist_cnn_quantized.onnx"
 vai_q_onnx.quantize_static(
     model_input=model_input,
     model_output=model_output,
     calibration_data_reader=MnistDataReader(),
-    quant_format=vai_q_onnx.VitisQuantFormat.FixNeuron,
+    quant_format=vai_q_onnx.VitisQuantFormat.QDQ,
     calibrate_method=vai_q_onnx.PowerOfTwoMethod.MinMSE,
     per_channel=False,
     activation_type=QuantType.QInt8,
