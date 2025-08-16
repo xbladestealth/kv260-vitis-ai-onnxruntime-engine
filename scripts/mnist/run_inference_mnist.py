@@ -2,6 +2,7 @@ import onnxruntime as ort
 import numpy as np
 import time
 import argparse
+from onnxruntime_extensions import get_library_path
 
 parser = argparse.ArgumentParser(description="Run MNIST inference with ONNXRuntime")
 parser.add_argument(
@@ -21,20 +22,36 @@ args = parser.parse_args()
 provider_map = {"cpu": "CPUExecutionProvider", "dpu": "VitisAIExecutionProvider"}
 provider = provider_map[args.provider]
 
-print(ort.get_available_providers())
+print("Available Execution Provider:", ort.get_available_providers())
+print("Selected Execution Provider:", provider)
 
 input_data = np.load(args.input).astype(np.float32)
 
+options = ort.SessionOptions()
+options.log_severity_level = 4  # Log severity level. Applies to session load, initialization, etc. 0:Verbose, 1:Info, 2:Warning. 3:Error, 4:Fatal. Default is 2.
+
 session = ort.InferenceSession(
     args.model,
+    sess_options=options,
     providers=[provider],
-    provider_options=[{"config_file": "/usr/bin/vaip_config.json"}],
+    provider_options=[
+        {
+            "config_file": "/usr/bin/vaip_config.json",
+            "custom_ops_library": get_library_path(),
+        }
+    ],
 )
 
 input_name = session.get_inputs()[0].name
+
+num_runs = 100
 start = time.time()
-outputs = session.run(None, {input_name: input_data})
+predictions = []
+for _ in range(num_runs):
+    outputs = session.run(None, {input_name: input_data})
+    predictions.append(np.argmax(outputs[0]))
 elapsed = time.time() - start
-prediction = np.argmax(outputs[0])
-print(f"Predicted digit ({args.provider.upper()}): {prediction}")
-print(f"Predicted time ({args.provider.upper()}): {elapsed}")
+
+print(f"Predicted digit ({args.provider.upper()}): {predictions[-1]}")
+print(f"Total time for {num_runs} runs ({args.provider.upper()}): {elapsed:.4f} sec")
+print(f"Average time per run ({args.provider.upper()}): {elapsed / num_runs:.6f} sec")

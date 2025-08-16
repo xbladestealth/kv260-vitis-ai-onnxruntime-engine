@@ -3,7 +3,7 @@
 ## Build Docker Image for Vitis AI 3.5.1
 
 ```bash
-cd Downloads/workspace/
+cd ~/Downloads/workspace/
 git clone https://github.com/xbladestealth/Vitis-AI -b 3.5.1
 cd Vitis-AI/docker/
 ./docker_build.sh -t gpu -f pytorch
@@ -105,7 +105,7 @@ Instead of following the Step 3, follow the instructions to build DPU applicatio
 After both the vitis platform and DPU application, prepare files to copy to your sd card:
 
 ```bash
-cd Downloads/workspace/kv260/
+cd ~/Downloads/workspace/kv260/
 mkdir -p sd_card/dpu/
 cd sd_card/
 cp kv260_vitis_platform/dtg_output/pl.dtbo dpu/
@@ -153,17 +153,17 @@ where `192.168.0.10` is the ip address of your PC.
 ## Copy Files (PC)
 
 ```bash
-cd Downloads/workspace/kv260/sd_card/
+cd ~/Downloads/workspace/kv260/sd_card/
 scp -r dpu/ petalinux@192.168.0.11:~/
 ```
 
 ```bash
-cd Downloads/workspace/downloads/
+cd ~/Downloads/workspace/downloads/
 scp vitis_ai_2023.1-r3.5.0.tar.gz voe-0.1.0-py3-none-any.whl onnxruntime_vitisai-1.16.0-py3-none-any.whl petalinux@192.168.0.11:./
 ```
 
 ```bash
-cd Downloads/workspace/Vitis-AI/kv260-vitis-ai-onnxruntime-engine/scripts/
+cd ~/Downloads/workspace/Vitis-AI/kv260-vitis-ai-onnxruntime-engine/scripts/
 scp -r mnist/ petalinux@192.168.0.11:~/
 ```
 
@@ -185,6 +185,7 @@ cd ~
 sudo tar -xzvf vitis_ai_2023.1-r3.5.0.tar.gz -C /
 pip3 install voe*.whl
 pip3 install onnxruntime_vitisai*.whl
+pip3 install onnxruntime_extensions==0.13.0
 ```
 
 ## Startup DPU (KV260)
