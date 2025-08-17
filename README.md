@@ -4,23 +4,23 @@
 
 ```bash
 cd ~/Downloads/workspace/
-git clone https://github.com/xbladestealth/Vitis-AI -b 3.5.1
+git clone https://github.com/xbladestealth/Vitis-AI -b 3.5.2
 cd Vitis-AI/docker/
 ./docker_build.sh -t gpu -f pytorch
 ```
 
 ```bash
 docker images
-REPOSITORY                        TAG                   IMAGE ID       CREATED          SIZE
-xilinx/vitis-ai-pytorch-gpu       3.5.1.001-ad2b6ded7   927a3d10b650   46 minutes ago   33.3GB
-xiinx/vitis-ai-gpu-pytorch-base   latest                03c687f7c06b   2 weeks ago      11.2GB
+REPOSITORY                        TAG                   IMAGE ID       CREATED              SIZE
+xilinx/vitis-ai-pytorch-gpu       3.5.2.001-6ee2ec228   279066f23f6c   About a minute ago   33.7GB
+xiinx/vitis-ai-gpu-pytorch-base   latest                03c687f7c06b   3 weeks ago          11.2GB
 ```
 
 ## Run Docker Container
 
 ```bash
 cd Vitis-AI/
-bash docker_run.sh xilinx/vitis-ai-pytorch-gpu:3.5.1.001-ad2b6ded7
+bash docker_run.sh xilinx/vitis-ai-pytorch-gpu:3.5.2.001-6ee2ec228
 conda activate vitis-ai-pytorch
 ```
 
